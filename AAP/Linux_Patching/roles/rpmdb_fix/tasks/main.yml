@@ -1,0 +1,28 @@
+---
+- name: Check if the system is running RHEL
+  ansible.builtin.shell: "cat /etc/redhat-release"
+  register: redhat_release
+  changed_when: false
+
+- name: Parse RHEL version
+  set_fact:
+    rhel_version: "{{ redhat_release.stdout | regex_search('[0-9]+') }}"
+
+- name: Validate RHEL version
+  fail:
+    msg: "This role supports only RHEL 8 and RHEL 9. Detected version: {{ rhel_version }}"
+  when: rhel_version not in supported_versions
+
+- name: Check if RPM database is functional
+  ansible.builtin.shell: "{{ rpmdb_test_command }}"
+  register: rpmdb_check
+  ignore_errors: true
+
+- name: Fix corrupted RPM database
+  ansible.builtin.shell: "{{ rpmdb_check_command }}"
+  when: rpmdb_check.rc != 0
+
+- name: Validate RPM database after repair
+  ansible.builtin.shell: "{{ rpmdb_test_command }}"
+  register: rpmdb_final_check
+  failed_when: rpmdb_final_check.rc != 0
