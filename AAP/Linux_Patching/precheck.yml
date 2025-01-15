@@ -22,6 +22,5 @@
           architecture: "{{ ansible_architecture }}"
 
   roles:
-    - healthcheck
     - rpmdb_fix
     - nfs_check_hang
