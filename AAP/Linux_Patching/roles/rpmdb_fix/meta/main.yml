@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: check_rpmdb
+  author: your_name
+  description: Ansible role to check and repair RPM database for RHEL 8 and 9.
+  license: MIT
+  platforms:
+    - name: RedHat
+      versions:
+        - "8"
+        - "9"
+dependencies: []
