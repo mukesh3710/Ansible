@@ -1,0 +1,27 @@
+---
+- name: Precheck for Linux patching
+  hosts: all
+  vars_files:
+    - vars/patchdefs.yml
+  pre_tasks:
+    - name: Check if limit is defined
+      fail:
+        msg: "Limit must be defined when running this playbook."
+      when: ansible_limit is undefined
+
+    - name: Gather minimal facts
+      setup:
+        gather_subset:
+          - min
+        gather_timeout: 10
+
+    - name: Set OS-specific variables
+      set_fact:
+        os_vars:
+          os_version: "{{ ansible_distribution_major_version }}"
+          architecture: "{{ ansible_architecture }}"
+
+  roles:
+    - healthcheck
+    - rpmdb_fix
+    - nfs_check_hang
