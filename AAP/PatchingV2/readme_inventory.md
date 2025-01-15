@@ -1,4 +1,4 @@
-# Setting up Linux Patching in Ansible Automation Platform with ServiceNow CMDB
+# Creating and managing inventory for Linux Patching in Ansible Automation Platform with ServiceNow CMDB
 
 **1. Create a New Organization**
 
