@@ -1,0 +1,3 @@
+---
+rpmdb_check_command: "rpm --rebuilddb"
+rpmdb_test_command: "rpm -qa"
