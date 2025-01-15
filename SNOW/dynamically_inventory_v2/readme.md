@@ -1,6 +1,6 @@
 # Dynamic Inventory for Linux Patching
 
-This project provides a dynamic inventory solution for Linux patching using Ansible. It integrates with ServiceNow CMDB to fetch server details and categorizes them into groups for efficient patching. The solution consists of a Python script (`dynamic_inventory.py`) for inventory generation and a Bash script (`generate_inventory.sh`) for execution. Credentials for ServiceNow API are securely managed via an environment-sourced `cred_file`.
+This project provides a dynamic inventory solution for Linux patching using Ansible. It integrates with ServiceNow CMDB to fetch server details and categorizes them into groups for efficient patching. The solution consists of a Python script (`dynamic_inventory.py`) for inventory generation and a Bash script (`inventory.sh`) for execution. Credentials for ServiceNow API are securely managed via an environment-sourced `cred_file`.
 
 ## **Project Components**
 
@@ -39,7 +39,7 @@ Supports various arguments for flexibility:
 #### **e. Output Formats**
 Supports output formats like JSON, Ansible, and batch run (future implementation).
 
-### **2. Bash Script: `generate_inventory.sh`**
+### **2. Bash Script: `inventory.sh`**
 The Bash script:
 - Sources credentials from a `cred_file`.
 - Verifies the presence of required credentials.
@@ -99,32 +99,32 @@ Run the script with desired options. Example usage:
 
 #### **Generate and Save Inventory**
 ```bash
-./generate_inventory.sh --action --generate --output /tmp/patching_inventory.json
+./inventory.sh --action --generate --output /tmp/patching_inventory.json
 ```
 
 #### **List Full Inventory**
 ```bash
-./generate_inventory.sh --action --list
+./inventory.sh --action --list
 ```
 
 #### **List All Groups**
 ```bash
-./generate_inventory.sh --action --groups
+./inventory.sh --action --groups
 ```
 
 #### **List Hosts in a Group**
 ```bash
-./generate_inventory.sh --action --group pool_1
+./inventory.sh --action --group pool_1
 ```
 
 #### **List Groups a Host Belongs To**
 ```bash
-./generate_inventory.sh --action --host host_name
+./inventory.sh --action --host host_name
 ```
 
 #### **List Hosts with Specific Prefixes**
 ```bash
-./generate_inventory.sh --action --prefix web,app
+./inventory.sh --action --prefix web,app
 ```
 
 ---
@@ -166,8 +166,3 @@ Uses `argparse` for flexible CLI argument handling:
 - Add support for batch run output format.
 - Implement logging for better traceability.
 - Introduce unit tests for Python script.
-
----
-
-## **Contributors**
-- [Your Name]
