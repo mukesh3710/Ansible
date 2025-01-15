@@ -1,3 +1,5 @@
 export SNOW_API_URL="https://your_instance.service-now.com/api/now/table/cmdb_ci_server"
-export SNOW_USERNAME="your_username"
-export SNOW_PASSWORD="your_password"
+export SNOW_API_ID="your_api_id"
+export SNOW_API_SECRET="your_api_secret"
+export SNOW_API_USERNAME="your_username"
+export SNOW_API_PASSWORD="your_password"
