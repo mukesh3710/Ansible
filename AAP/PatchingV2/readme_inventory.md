@@ -1,6 +1,6 @@
 # Creating and managing inventory for Linux Patching in Ansible Automation Platform with ServiceNow CMDB
 
-**1. Create a New Organization**
+## 1. Create a New Organization
 
 1. Log in to the AAP Web UI.
 2. Navigate to **Organizations** from the left-side menu.
