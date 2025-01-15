@@ -1,0 +1,11 @@
+repos_enable:
+  rhel_8:
+    - rhel-8-server-rpms
+  rhel_9:
+    - rhel-9-server-rpms
+
+repos_disable:
+  rhel_8:
+    - rhel-8-beta-rpms
+  rhel_9:
+    - rhel-9-beta-rpms
