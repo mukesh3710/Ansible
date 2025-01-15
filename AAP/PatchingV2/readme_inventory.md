@@ -10,7 +10,7 @@
     * **Description:** (e.g., "Organization for managing Linux patching")
 5. Click **Save**.
 
-**2. Grant Access to Users**
+## 2. Grant Access to Users
 
 1. Go to the **Users** section under the **Access** tab of the organization.
 2. Click **Add** to assign users to the organization.
@@ -19,7 +19,7 @@
     * **Member:** Limited access to resources within the organization.
 4. Save changes.
 
-**3. Configure the Dynamic Inventory**
+## 3. Configure the Dynamic Inventory
 
 1. **Create a New Inventory:**
     * Navigate to **Inventories** in AAP.
@@ -44,7 +44,7 @@
     * Click **Sync** to fetch the inventory from ServiceNow.
     * Verify the results in the **Hosts** tab.
 
-**4. Divide Hosts into Groups**
+## 4. Divide Hosts into Groups
 
 * The dynamic inventory script organizes hosts into groups (e.g., `pool_1`, `pool_2`, etc.) based on the `u_pool` field.
 * **Verify Host Groups:**
@@ -57,7 +57,7 @@
 * **Use Groups as Limits:**
     * When creating a job template, use these groups as limits to target specific sets of hosts.
 
-**5. Where to Find All Hosts Gathered by the Inventory**
+## 5. Where to Find All Hosts Gathered by the Inventory
 
 1. Navigate to the **Inventories** section.
 2. Select the inventory created in Step 3.
@@ -65,7 +65,7 @@
 4. Use the search bar to filter hosts by name or variables.
 5. The `_meta` section in the inventory JSON output contains the host variables.
 
-**6. How to Check the Source of the Inventory**
+## 6. How to Check the Source of the Inventory
 
 1. Navigate to the **Inventories** section.
 2. Select the inventory created earlier.
@@ -79,7 +79,7 @@
     * Click on the **Activity Stream** tab for the inventory.
     * Review the logs to debug or verify the sync process.
 
-**7. How to Select Hosts by u_pool in Job Templates**
+## 7. How to Select Hosts by u_pool in Job Templates
 
 1. **Create a Job Template:**
     * Navigate to **Templates** and click **Add**.
