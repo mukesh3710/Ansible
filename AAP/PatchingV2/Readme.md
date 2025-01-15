@@ -1,4 +1,6 @@
-# Linux Patching CMDB Data Management
+# Linux Patching with AAP
+
+## Linux Patching CMDB Data Management
 
 Ansible Automation Platform for patching utilizes the ServiceNow CMDB as the source of record for patching-related data. 
 
@@ -14,7 +16,7 @@ Within the CMDB, several custom fields are employed to store patching data. The 
 
 A dynamic inventory script, written in Python, interacts with ServiceNow to retrieve hostnames and patching-related data. This script then parses the data and organizes servers into Ansible inventory groups based on the values of `u_pool` and `u_state`. These patching group names dictate the execution order during each patching window. Patching is organized by environment and further subdivided into groups within each environment.
 
-**2. Patching Inventory Script**
+## Patching Inventory Script**
 
 The script executes daily within the AAP to maintain an up-to-date inventory. As hosts are added or removed in the CMDB, the inventory reflects these changes. 
 
