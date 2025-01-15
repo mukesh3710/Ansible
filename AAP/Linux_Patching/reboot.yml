@@ -1,0 +1,13 @@
+---
+- name: Reboot Linux servers
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure limit is defined
+      fail:
+        msg: "Limit must be defined when running this playbook."
+      when: ansible_limit is undefined
+
+    - name: Reboot the server
+      reboot:
+        reboot_timeout: 300
