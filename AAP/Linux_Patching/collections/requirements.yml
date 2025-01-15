@@ -1,0 +1,6 @@
+collections:
+  - name: ansible.posix
+  - name: community.general
+roles:
+  - name: linux_patching_roles
+    src: https://github.com/example-repo/linux_patching_roles.git
