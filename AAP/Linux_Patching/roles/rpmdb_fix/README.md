@@ -16,4 +16,4 @@ This Ansible role checks if the RPM database (`rpmdb`) on a RHEL 8 or RHEL 9 sys
 ```yaml
 - hosts: all
   roles:
-    - role: ansible-role-check-rpmdb
+    - role: rpmdb_fix
