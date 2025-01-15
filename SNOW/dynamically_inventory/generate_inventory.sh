@@ -86,14 +86,14 @@ else
 fi
 
 # Validate required variables
-if [[ -z "$SNOW_API_URL" || -z "$SNOW_API_ID" || -z "$SNOW_API_SECRET" ]]; then
+if [[ -z "$SNOW_API_URL" || -z "$SNOW_API_ID" || -z "$SNOW_API_SECRET" || -z "$SNOW_API_USERNAME" || -z "$SNOW_API_PASSWORD" ]]; then
     echo "Error: Missing ServiceNow API credentials in the source file"
     exit 1
 fi
 
-# Append "Api_" to username and password
-SNOW_USERNAME="Api_${SNOW_API_ID}"
-SNOW_PASSWORD="Api_${SNOW_API_SECRET}"
+# Append "Api_" to username and password derived from snow_api_id and snow_api_secret
+SNOW_USERNAME="Api_${SNOW_API_ID}_${SNOW_API_USERNAME}"
+SNOW_PASSWORD="Api_${SNOW_API_SECRET}_${SNOW_API_PASSWORD}"
 
 # Run the Python script
 if [[ $DEBUG -eq 1 ]]; then
