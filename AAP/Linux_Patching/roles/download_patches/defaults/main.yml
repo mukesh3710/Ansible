@@ -1,0 +1,4 @@
+---
+# Cache directories for RHEL 8 and RHEL 9
+cache_dir_rhel8: "/var/cache/yum"
+cache_dir_rhel9: "/var/cache/dnf"
