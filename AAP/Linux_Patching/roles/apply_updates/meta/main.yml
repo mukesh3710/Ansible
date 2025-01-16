@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: apply_cached_patches
+  author: 
+  description: Apply previously cached patches on RHEL 8 and RHEL 9.
+  license: MIT
+  platforms:
+    - name: RedHat
+      versions:
+        - "8"
+        - "9"
+dependencies: []
