@@ -1,0 +1,8 @@
+---
+- name: Remove all but the latest 2 kernels
+  ansible.builtin.shell: >
+    yum remove $(yum repoquery --installonly --latest-limit=-2 -q) -y
+  args:
+    warn: false
+  register: kernel_removal
+  changed_when: "'No Match for argument' not in kernel_removal.stderr"
