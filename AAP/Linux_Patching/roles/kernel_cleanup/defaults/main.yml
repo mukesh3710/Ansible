@@ -1,0 +1,3 @@
+---
+# Number of kernels to retain
+kernel_keep_count: 2
