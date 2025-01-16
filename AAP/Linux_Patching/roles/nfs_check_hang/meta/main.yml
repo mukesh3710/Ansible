@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: nfs_check_hang
+  author: your_name
+  description: Ansible role to check for unresponsive or hung NFS filesystems.
+  license: MIT
+  platforms:
+    - name: RedHat
+      versions:
+        - "7"
+        - "8"
+        - "9"
+    - name: Ubuntu
+      versions:
+        - "20.04"
+        - "22.04"
+dependencies: []
