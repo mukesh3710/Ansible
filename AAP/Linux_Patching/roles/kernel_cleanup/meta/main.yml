@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: clean_kernels
+  author: 
+  description: Remove all old kernels except the latest 2 on RHEL 8 and RHEL 9.
+  license: MIT
+  platforms:
+    - name: RedHat
+      versions:
+        - "8"
+        - "9"
+dependencies: []
