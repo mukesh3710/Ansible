@@ -1,0 +1,28 @@
+---
+- name: Get all mounted NFS filesystems
+  ansible.builtin.shell: "{{ nfs_mount_test_command }}"
+  register: nfs_mounts
+  changed_when: false
+
+- name: Parse NFS mount points
+  set_fact:
+    nfs_mount_points: "{{ nfs_mounts.stdout_lines | map('regex_search', '^([^ ]+)') | select('string') | list }}"
+
+- name: Check if NFS filesystems are hung
+  ansible.builtin.shell: "{{ nfs_check_command }}"
+  with_items: "{{ nfs_mount_points }}"
+  register: nfs_check_results
+  failed_when: false
+  changed_when: false
+
+- name: Report hung NFS filesystems
+  debug:
+    msg: "The following NFS mount point is not responding: {{ item.item }}"
+  with_items: "{{ nfs_check_results.results }}"
+  when: item.rc != 0
+
+- name: Fail if any NFS filesystems are hung
+  fail:
+    msg: "One or more NFS filesystems are not responding. Check the mounts: {{ item.item }}"
+  with_items: "{{ nfs_check_results.results }}"
+  when: item.rc != 0
