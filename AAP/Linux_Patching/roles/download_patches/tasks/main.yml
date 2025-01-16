@@ -1,0 +1,36 @@
+---
+- name: Ensure proper cache directory for RHEL 8 or RHEL 9
+  ansible.builtin.file:
+    path: "{{ cache_dir_rhel8 if ansible_facts.os_major == '8' else cache_dir_rhel9 }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable required repositories
+  ansible.builtin.yum_repository:
+    name: "{{ item }}"
+    enabled: yes
+  with_items: "{{ repos_enable.rhel_8 if ansible_facts.os_major == '8' else repos_enable.rhel_9 }}"
+
+- name: Disable unnecessary repositories
+  ansible.builtin.yum_repository:
+    name: "{{ item }}"
+    enabled: no
+  with_items: "{{ repos_disable.rhel_8 if ansible_facts.os_major == '8' else repos_disable.rhel_9 }}"
+
+- name: Download all packages and cache them
+  ansible.builtin.shell: >
+    {{ 'yum' if ansible_facts.os_major == '8' else 'dnf' }}
+    --downloadonly
+    --downloaddir="{{ cache_dir_rhel8 if ansible_facts.os_major == '8' else cache_dir_rhel9 }}"
+    install '*'
+  args:
+    warn: false
+  register: cache_packages
+  changed_when: "'Complete!' in cache_packages.stdout or 'All matches were filtered' in cache_packages.stdout"
+
+- name: Verify cache status
+  ansible.builtin.debug:
+    msg: "Packages cached successfully in {{ cache_dir_rhel8 if ansible_facts.os_major == '8' else cache_dir_rhel9 }}."
+  when: "'Complete!' in cache_packages.stdout or 'All matches were filtered' in cache_packages.stdout"
