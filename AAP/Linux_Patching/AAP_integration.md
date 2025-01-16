@@ -37,3 +37,19 @@
     * Python dependencies like requests (used for the ServiceNow inventory script).
     * Collections mentioned in collections/requirements.yml (e.g., community.general, ansible.posix).
 2. If the execution environment is ready, upload it to AAP.
+
+
+## Run Job Templates
+
+1. Navigate to the Job Templates in AAP.
+2. Launch each job template sequentially:
+    * Start with Linux Patching - Precheck.
+    * Wait for its completion.
+    * Proceed to Linux Patching - Stage.
+    * Follow with Linux Patching - Apply.
+    * End with Linux Patching - Reboot.
+
+**Tips:**
+
+* Use Surveys to allow dynamic input for the `u_pool` limit when running templates.
+* Monitor job execution logs to troubleshoot issues.
