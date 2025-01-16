@@ -1,0 +1,3 @@
+---
+nfs_mount_test_command: "df -hT | grep nfs"
+nfs_check_command: "timeout 5 ls -l {{ item }}"
