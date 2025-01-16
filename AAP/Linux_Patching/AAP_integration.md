@@ -53,3 +53,12 @@
 
 * Use Surveys to allow dynamic input for the `u_pool` limit when running templates.
 * Monitor job execution logs to troubleshoot issues.
+
+## Verify Patching Process
+
+1. Check logs in AAP to ensure tasks are executed correctly.
+2. Verify patching by checking the updated package versions on target hosts.
+
+This setup ensures an efficient and reusable workflow for Linux patching using AAP and the jump server.
+
+Let me know if you need further assistance!
