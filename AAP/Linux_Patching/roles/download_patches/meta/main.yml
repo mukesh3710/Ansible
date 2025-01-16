@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  role_name: download_patches
+  author: your_name
+  description: Ansible role to download and cache all packages from a Satellite server in RHEL 8 and RHEL 9.
+  license: MIT
+  platforms:
+    - name: RedHat
+      versions:
+        - "8"
+        - "9"
+dependencies: []
