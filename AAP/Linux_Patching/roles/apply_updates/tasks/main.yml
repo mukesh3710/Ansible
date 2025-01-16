@@ -1,0 +1,36 @@
+---
+- name: Ensure the cache directory exists for RHEL 8
+  ansible.builtin.stat:
+    path: /var/cache/yum
+  when: ansible_distribution_major_version == "8"
+  register: yum_cache
+
+- name: Ensure the cache directory exists for RHEL 9
+  ansible.builtin.stat:
+    path: /var/cache/dnf
+  when: ansible_distribution_major_version == "9"
+  register: dnf_cache
+
+- name: Fail if cache directory does not exist for RHEL 8
+  ansible.builtin.fail:
+    msg: "Cache directory /var/cache/yum does not exist. Ensure packages are cached before applying patches."
+  when: ansible_distribution_major_version == "8" and not yum_cache.stat.exists
+
+- name: Fail if cache directory does not exist for RHEL 9
+  ansible.builtin.fail:
+    msg: "Cache directory /var/cache/dnf does not exist. Ensure packages are cached before applying patches."
+  when: ansible_distribution_major_version == "9" and not dnf_cache.stat.exists
+
+- name: Apply cached patches on RHEL 8
+  ansible.builtin.shell: >
+    yum update -y --disablerepo="*" --enablerepo="file:///var/cache/yum"
+  args:
+    warn: false
+  when: ansible_distribution_major_version == "8"
+
+- name: Apply cached patches on RHEL 9
+  ansible.builtin.shell: >
+    dnf update -y --disablerepo="*" --enablerepo="file:///var/cache/dnf"
+  args:
+    warn: false
+  when: ansible_distribution_major_version == "9"
