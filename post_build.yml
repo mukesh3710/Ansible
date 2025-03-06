@@ -1,35 +1,18 @@
 ---
-- name: Conditional Copy and Symlink Execution
+- name: Update multiple sysctl parameters
   hosts: servers
-  vars:
-    execute_copy_and_link: "no"  # Default to "no" if not provided
-
   tasks:
-    - name: Normalize user input (convert blank or invalid values to "no")
-      set_fact:
-        execute_copy_and_link: "{{ 'no' if execute_copy_and_link | lower not in ['yes', 'no'] else execute_copy_and_link | lower }}"
+    - name: Set sysctl parameters
+      lineinfile:
+        path: /etc/sysctl.conf
+        regexp: "^{{ item.key }}\\s*="
+        line: "{{ item.key }} = {{ item.value }}"
+        state: present
+        create: yes
+      loop:
+        - { key: "net.ipv4.ip_forward", value: "1" }
+        - { key: "vm.swappiness", value: "10" }
+        - { key: "fs.file-max", value: "2097152" }
 
-    - name: Execute only if the value is "yes"
-      block:
-        - name: Ensure destination directory exists
-          file:
-            path: "/opt/myfiles"
-            state: directory
-            mode: '0755'
-
-        - name: Copy the file
-          copy:
-            src: "/tmp/sample.txt"
-            dest: "/opt/myfiles/sample.txt"
-            mode: '0644'
-
-        - name: Create a symbolic link
-          file:
-            src: "/opt/myfiles/sample.txt"
-            dest: "/opt/myfiles/sample_link"
-            state: link
-      when: execute_copy_and_link == 'yes'
-
-    - name: Run other tasks unconditionally
-      debug:
-        msg: "This is another task that always runs!"
+    - name: Apply sysctl changes
+      command: sysctl -p
