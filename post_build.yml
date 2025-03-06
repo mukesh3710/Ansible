@@ -1,0 +1,16 @@
+---
+- name: Execute Roles Based on User Input
+  hosts: servers
+  vars:
+    execute_copy_and_link: ""  # Default value, overridden by survey input
+
+  pre_tasks:
+    - name: Validate user input
+      fail:
+        msg: "Invalid input for 'execute_copy_and_link'. Must be 'yes' or 'no'."
+      when: execute_copy_and_link | lower not in ['yes', 'no']
+
+  roles:
+    - { role: copy_and_link, when: execute_copy_and_link | lower == 'yes' }
+    - another_role  # Always runs
+    - yet_another_role  # Always runs
