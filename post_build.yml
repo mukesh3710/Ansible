@@ -1,16 +1,35 @@
 ---
-- name: Execute Roles Based on User Input
+- name: Conditional Copy and Symlink Execution
   hosts: servers
   vars:
-    execute_copy_and_link: ""  # Default value, overridden by survey input
+    execute_copy_and_link: "no"  # Default to "no" if not provided
 
-  pre_tasks:
-    - name: Validate user input
-      fail:
-        msg: "Invalid input for 'execute_copy_and_link'. Must be 'yes' or 'no'."
-      when: execute_copy_and_link | lower not in ['yes', 'no']
+  tasks:
+    - name: Normalize user input (convert blank or invalid values to "no")
+      set_fact:
+        execute_copy_and_link: "{{ 'no' if execute_copy_and_link | lower not in ['yes', 'no'] else execute_copy_and_link | lower }}"
 
-  roles:
-    - { role: copy_and_link, when: execute_copy_and_link | lower == 'yes' }
-    - another_role  # Always runs
-    - yet_another_role  # Always runs
+    - name: Execute only if the value is "yes"
+      block:
+        - name: Ensure destination directory exists
+          file:
+            path: "/opt/myfiles"
+            state: directory
+            mode: '0755'
+
+        - name: Copy the file
+          copy:
+            src: "/tmp/sample.txt"
+            dest: "/opt/myfiles/sample.txt"
+            mode: '0644'
+
+        - name: Create a symbolic link
+          file:
+            src: "/opt/myfiles/sample.txt"
+            dest: "/opt/myfiles/sample_link"
+            state: link
+      when: execute_copy_and_link == 'yes'
+
+    - name: Run other tasks unconditionally
+      debug:
+        msg: "This is another task that always runs!"
