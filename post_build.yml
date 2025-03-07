@@ -1,18 +1,82 @@
 ---
-- name: Update multiple sysctl parameters
-  hosts: servers
-  tasks:
-    - name: Set sysctl parameters
-      lineinfile:
-        path: /etc/sysctl.conf
-        regexp: "^{{ item.key }}\\s*="
-        line: "{{ item.key }} = {{ item.value }}"
-        state: present
-        create: yes
-      loop:
-        - { key: "net.ipv4.ip_forward", value: "1" }
-        - { key: "vm.swappiness", value: "10" }
-        - { key: "fs.file-max", value: "2097152" }
+- name: UDB Post build tasks
+  hosts: all
+  gather_facts: false
+  vars:
+    execute_db2init: "no"  # Default value, overridden by survey input
 
-    - name: Apply sysctl changes
-      command: sysctl -p
+  pre_tasks:
+    - name: assert limit
+      ansible.builtin.assert:
+        that:
+        - ansible_limit is defined
+        - ansible_limit != 'all'
+        fail_msg: Playbook must be run with a limit
+        quiet: yes
+      run_once: yes
+
+  tasks:
+  - name: Validate user input (convert blank or invalid values to "no")
+    set_fact:
+      execute_db2init: "{{ 'no' if execute_db2init | lower not in ['yes', 'no'] else execute_db2init | lower }}"
+
+  - name: Execute db2init if the value is "yes"
+    block:
+      - name: removing existing init symlinks
+        shell: rm -rf /etc/rc*.d/*db2stopstart
+        ignore_errors: yes
+
+      - name: copying db2 init script
+        copy:
+          src: udb_postbuild_files/db2stopstart
+          dest: /etc/init.d/db2stopstart
+          owner: root
+          group: root
+          mode: 0755
+  
+      - name: linking db2 init to run level three
+        file:
+          src: /etc/init.d/db2stopstart
+          dest: /etc/rc3.d/S99db2stopstart
+          state: link
+  
+      - name: linking db2 init to run level six
+        file:
+          src: /etc/init.d/db2stopstart
+          dest: /etc/rc6.d/K01db2stopstart
+          state: link
+  
+      - name: linking db2 init to run leve1 zero
+        file:
+          src: /etc/init.d/db2stopstart
+          dest: /etc/rc0.d/K01db2stopstart
+          state: link
+    when: execute_db2init == 'yes'
+
+  - name: copying db2 sudo
+    copy:
+      src: udb_postbuild_files/db2dba
+      dest: /etc/sudoers.d/db2dba
+      owner: root
+      group: root
+      mode: 0440
+
+  - name: Ensure mksh is installed
+    dnf:
+      name: mksh
+      state: latest
+
+  - name: Set sysctl parameters
+    lineinfile:
+      path: /etc/sysctl.conf
+      regexp: "^{{ item.key }}\\s*="
+      line: "{{ item.key }} = {{ item.value }}"
+      state: present
+      create: yes
+    loop:
+      - { key: "vm.swappiness", value: "1" }
+      - { key: "net.ipv4.conf.all.rp_filter", value: "2" }
+      - { key: "net.ipv4.conf.default.rp_filter", value: "2" }
+
+  - name: Apply sysctl changes
+    command: sysctl -p
