@@ -50,8 +50,8 @@
       ansible.builtin.set_fact:
         user_details: "{{ user_info.stdout.split(':') }}"
         shadow_details: "{{ shadow_info.stdout.split(':') }}"
-        password_age_details: "{{ password_age.stdout_lines }}"
-        group_list: "{{ group_details.stdout_lines | map('split', ':') | list }}"
+        password_age_details: "{{ password_age.stdout | split('\n') }}"
+        group_list: "{{ group_details | map('split', ':') | list }}"
 
     - name: Extract password aging values
       ansible.builtin.set_fact:
