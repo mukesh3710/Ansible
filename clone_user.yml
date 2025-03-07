@@ -35,12 +35,16 @@
       register: user_group_gids
       changed_when: false
 
-    - name: Fetch group names and GIDs mapping
+    - name: Fetch group names and GIDs mapping from source
       ansible.builtin.command:
-        cmd: "getent group | grep -E '^({{ user_group_gids.stdout | replace('\x00', '|') }})'"
-      delegate_to: "{{ source_host }}"
-      register: group_details
+        cmd: "getent group"
+      delegate_to: "{{ SOURCE_HOST }}"
+      register: all_groups
       changed_when: false
+
+    - name: Filter groups that match user's secondary groups
+      ansible.builtin.set_fact:
+        group_details: "{{ all_groups.stdout_lines | select('search', '^(?:' + user_group_gids.stdout.replace('\x00', '|') + '):') | list }}"
 
     - name: Extract user details
       ansible.builtin.set_fact:
