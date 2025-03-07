@@ -1,0 +1,104 @@
+---
+- name: Clone User from Source to Target
+  hosts: target_host
+  gather_facts: no
+  vars:
+    username: "{{ USERNAME }}"
+    source_host: "{{ SOURCE_HOST }}"
+
+  tasks:
+    - name: Fetch user details from source server
+      ansible.builtin.command:
+        cmd: "getent passwd {{ username }}"
+      delegate_to: "{{ source_host }}"
+      register: user_info
+      changed_when: false
+
+    - name: Fetch password hash from /etc/shadow
+      ansible.builtin.command:
+        cmd: "getent shadow {{ username }}"
+      delegate_to: "{{ source_host }}"
+      register: shadow_info
+      changed_when: false
+
+    - name: Fetch password aging details
+      ansible.builtin.command:
+        cmd: "chage -l {{ username }}"
+      delegate_to: "{{ source_host }}"
+      register: password_age
+      changed_when: false
+
+    - name: Fetch all groups of user with GIDs
+      ansible.builtin.command:
+        cmd: "id -Gnz {{ username }}"
+      delegate_to: "{{ source_host }}"
+      register: user_group_gids
+      changed_when: false
+
+    - name: Fetch group names and GIDs mapping
+      ansible.builtin.command:
+        cmd: "getent group | grep -E '^({{ user_group_gids.stdout | replace('\x00', '|') }})'"
+      delegate_to: "{{ source_host }}"
+      register: group_details
+      changed_when: false
+
+    - name: Extract user details
+      ansible.builtin.set_fact:
+        user_details: "{{ user_info.stdout.split(':') }}"
+        shadow_details: "{{ shadow_info.stdout.split(':') }}"
+        password_age_details: "{{ password_age.stdout_lines }}"
+        group_list: "{{ group_details.stdout_lines | map('split', ':') | list }}"
+
+    - name: Extract password aging values
+      ansible.builtin.set_fact:
+        min_days: "{{ password_age_details[1].split(': ')[1] | int }}"
+        max_days: "{{ password_age_details[2].split(': ')[1] | int }}"
+
+    - name: Check existing groups on target
+      ansible.builtin.command:
+        cmd: "getent group"
+      register: existing_groups
+      changed_when: false
+
+    - name: Ensure all groups exist on target with correct GID
+      ansible.builtin.group:
+        name: "{{ item[0] }}"
+        gid: "{{ item[2] | int }}"
+        state: present
+      loop: "{{ group_list }}"
+      when: "item[0] not in existing_groups.stdout"
+
+    - name: Create user on target server
+      ansible.builtin.user:
+        name: "{{ username }}"
+        uid: "{{ user_details[2] }}"
+        group: "{{ user_details[3] }}"
+        home: "{{ user_details[5] }}"
+        shell: "{{ user_details[6] }}"
+        comment: "{{ user_details[4] }}"
+        createhome: yes
+        password: "{{ shadow_details[1] }}"
+        groups: "{{ group_list | map(attribute=0) | list }}"
+        append: yes
+
+    - name: Set user password expiry policy
+      ansible.builtin.command:
+        cmd: "chage -I -1 -m {{ min_days }} -M {{ max_days }} -E -1 {{ username }}"
+      changed_when: false
+
+    - name: Validate user creation on target
+      ansible.builtin.command:
+        cmd: "id {{ username }}"
+      register: validate_user
+      changed_when: false
+      failed_when: validate_user.rc != 0
+
+    - name: Validate password aging policy on target
+      ansible.builtin.command:
+        cmd: "chage -l {{ username }}"
+      register: validate_chage
+      changed_when: false
+
+    - name: Display final validation result
+      ansible.builtin.debug:
+        msg: "User {{ username }} successfully cloned on {{ inventory_hostname }} with correct UID, groups, home, shell, and password policy."
