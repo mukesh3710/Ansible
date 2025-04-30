@@ -1,0 +1,48 @@
+---
+- name: Linux Post-Patch and Reboot Validation
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - vars/kernel_version.yml
+
+  pre_tasks:
+    - name: assert limit
+      ansible.builtin.assert:
+        that:
+        - ansible_limit is defined
+        - ansible_limit != 'all'
+        fail_msg: Playbook must be run with a limit
+        quiet: yes
+      run_once: yes
+
+    - name: Gather kenrel and major_versios facts about the host
+      ansible.builtin.setup:
+        gather_subset:
+        - '!all'
+        - 'kernel'
+        - 'distribution_major_version'
+
+    - name: Validate kernel version
+      ansible.builtin.fail:
+        msg: "Kernel version mismatch! Expected {{ kernel_versions[ansible_distribution_major_version] }}, but found {{ ansible_kernel }}"
+      when: ansible_kernel != kernel_versions[ansible_distribution_major_version]
+
+  tasks:
+    - name: Ensure uptime is less than 1 hour
+      ansible.builtin.shell: awk '{print $1}' /proc/uptime
+      register: uptime_seconds
+      changed_when: false
+
+    - name: Fail if uptime is greater than 3600 seconds (1 hour)
+      ansible.builtin.fail:
+        msg: "Uptime exceeded 1 hour! Current uptime: {{ uptime_seconds.stdout }} seconds"
+      when: uptime_seconds.stdout | int > 3600
+
+    - name: Mount all file systems
+      ansible.builtin.command: mount -a
+      failed_when: false
+      timeout: 10
+
+    - name: Clean package cache (YUM/DNF)
+      ansible.builtin.command: "{{ 'dnf clean all' if ansible_distribution_major_version | int >= 8 else 'yum clean all' }}"
+      failed_when: false
