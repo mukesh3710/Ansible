@@ -1,0 +1,28 @@
+vm_name: "vm01"
+vm_disk_gb: 20
+vm_disk_datastore: "ds2"
+vm_hw_ram_mb: 2048
+vm_hw_cpu_n: 1
+
+vm_disks:
+  - size_gb: 20
+    type: thin
+    datastore: ds1
+  - size_gb: 3
+    type: thin
+    datastore: ds1
+
+vm_networks:
+  - name: "VM Network"
+    start_connected: yes
+    device_type: vmxnet3
+    type: static
+    ip: "192.168.0.171"
+    netmask: "255.255.255.0"
+    gateway: "192.168.0.1"
+    dns_servers:
+      - "192.168.0.101"
+  - name: "VM Network"
+    start_connected: yes
+    device_type: vmxnet3
+    type: dhcp

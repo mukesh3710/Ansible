@@ -1,0 +1,14 @@
+vcenter_hostname: "vcenter7.lab.local"
+vcenter_username: "administrator@vsphere.local"
+vcenter_validate_certs: false
+vcenter_datacenter: "datacenter1"
+vcenter_cluster: "cluster1"
+vm_template: "template"
+vm_state: "poweredon"
+hot_add_cpu: true
+hot_add_memory: true
+vm_hw_scsi: "paravirtual"
+vm_guest_id: "other4xLinux64Guest"
+vm_disk_type: "thin"
+vm_hw_scsi: "paravirtual"
+

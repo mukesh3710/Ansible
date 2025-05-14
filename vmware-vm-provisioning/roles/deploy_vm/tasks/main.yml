@@ -1,0 +1,29 @@
+- name: Create or update VM from template
+  community.vmware.vmware_guest:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    validate_certs: "{{ vcenter_validate_certs }}"
+    datacenter: "{{ vcenter_datacenter }}"
+    cluster: "{{ vcenter_cluster }}"
+    folder: "/{{ vcenter_datacenter }}/vm"
+    name: "{{ vm_name }}"
+    template: "{{ vm_template }}"
+    state: "{{ vm_state }}"
+    disk: "{{ vm_disks }}"
+    hardware:
+      memory_mb: "{{ vm_hw_ram_mb }}"
+      num_cpus: "{{ vm_hw_cpu_n }}"
+      scsi: "{{ vm_hw_scsi }}"
+      hotadd_cpu: "{{ hot_add_cpu | default(true) }}"
+      hotadd_memory: "{{ hot_add_memory | default(true) }}"
+    networks: "{{ vm_networks }}"
+    customization:
+      hostname: "{{ vm_name }}"
+      domain: "{{ vm_domain | default('lab.local') }}"
+  delegate_to: localhost
+  register: vm_result
+
+- name: Show VM creation result
+  debug:
+    var: vm_result

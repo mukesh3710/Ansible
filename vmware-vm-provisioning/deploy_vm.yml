@@ -1,0 +1,12 @@
+# deploy_vm.yml
+- name: Deploy VMs from template
+  hosts: all
+  gather_facts: false
+  become: false
+
+  vars_files:
+    - vars/password.yml  # vcenter_password is sensitive
+
+  roles:
+    - deploy_vm
+
