@@ -1,0 +1,21 @@
+version: 1
+
+build_arg_defaults:
+  EE_BASE_IMAGE: my_custom_ee_base:latest # <-- Use your newly built image here
+
+dependencies:
+  galaxy: requirement.yml
+  python: requirement.txt
+  system: bindep.txt
+
+additional_build_steps:
+  # The prepend section can now be empty or contain very minimal setup
+  # since most of your core packages and Ansible are in the base image.
+  prepend: |
+    # You might want to add any last-minute checks or configurations here,
+    # but for typical use cases, it might be empty if all core deps are in the base.
+    RUN echo "Prepend steps after custom base image setup (if any)"
+
+  append:
+    - RUN echo "✅ Custom base image with Python 3.9.21 and Ansible Core 2.15 used."
+    - RUN echo "✅ Final execution environment configured."
