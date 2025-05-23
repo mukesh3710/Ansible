@@ -1,4 +1,4 @@
-# Custom Ansible Execution Environment wiht CentOS Stream 9 minimum image 
+# Custom Ansible Execution Environment with CentOS Stream 9 minimum image 
 ---
 Prerequisites:
 - Installation Steps for Prerequisites
