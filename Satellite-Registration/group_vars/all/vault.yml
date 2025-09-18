@@ -1,0 +1,3 @@
+# group_vars/all/vault.yml  (encrypt this with ansible-vault)
+foreman_username: "sat_admin"
+foreman_password: "SuperSecretPasswordOrToken"
