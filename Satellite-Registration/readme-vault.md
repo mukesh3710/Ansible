@@ -24,3 +24,8 @@ This repository contains an Ansible playbook to register hosts to Red Hat Satell
 - Install the Foreman collection:
   ```bash
   ansible-galaxy collection install theforeman.foreman
+
+## Run the playbook
+```bash
+ansible-playbook -i inventory register_to_satellite.yml --ask-vault-pass
+```
