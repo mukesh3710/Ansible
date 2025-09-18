@@ -1,0 +1,101 @@
+---
+- name: Register host to Satellite using AWX-stored bearer token & activation key
+  hosts: all
+  become: true
+  gather_facts: true
+
+  # NOTE: these non-secret defaults may be overridden at job-template level or via extra_vars
+  vars:
+    satellite_url: "https://satellite.lab.local/register"   # <-- no trailing parameters
+    location_id: "4"
+    os_id: "2"
+    org_id: "3"
+    download_utility: "curl"
+    update_packages: "false"
+    validate_certs: false   # set to true in production if AWX / targets trust Satellite certs
+
+  tasks:
+    - name: Read node.class file (if present)
+      ansible.builtin.slurp:
+        src: /etc/node.class
+      register: node_class
+      ignore_errors: true
+
+    - name: Determine lifecycle environment (Development/Production/Library)
+      set_fact:
+        lifecycle_env: >-
+          {% if node_class is not failed %}
+            {% set val = (node_class['content'] | b64decode).strip() %}
+            {% if val in ['Development', 'Production'] %}
+              {{ val }}
+            {% else %}
+              Library
+            {% endif %}
+          {% else %}
+            Library
+          {% endif %}
+
+    - name: Build Satellite registration URL
+      set_fact:
+        registration_url: >-
+          {{ satellite_url }}?activation_keys={{ satellite_activation_key | urlencode }}
+          &lifecycle_environment={{ lifecycle_env | urlencode }}
+          &download_utility={{ download_utility | urlencode }}
+          &location_id={{ location_id | urlencode }}
+          &operatingsystem_id={{ os_id | urlencode }}
+          &organization_id={{ org_id | urlencode }}
+          &update_packages={{ update_packages | urlencode }}
+
+    - name: Request registration script from Satellite (do not log sensitive content)
+      ansible.builtin.uri:
+        url: "{{ registration_url | regex_replace('\\s+', '') }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ satellite_bearer_token }}"
+          Accept: "text/plain,application/x-sh"
+        return_content: yes
+        status_code: 200
+        validate_certs: "{{ validate_certs | default(false) }}"
+      register: sat_registration
+      no_log: true
+
+    - name: Fail if Satellite did not return a registration script
+      ansible.builtin.fail:
+        msg: "Satellite registration endpoint returned status {{ sat_registration.status }} or empty body."
+      when: sat_registration is not defined or (sat_registration.status != 200) or (sat_registration.content is not defined) or (sat_registration.content|trim == "")
+      no_log: true
+
+    - name: Write registration script to temporary file (owner root, mode 0700)
+      ansible.builtin.copy:
+        content: "{{ sat_registration.content | b64decode if sat_registration.content is defined and sat_registration.content is string else sat_registration.content }}"
+        dest: /tmp/satellite_register_{{ ansible_date_time.epoch }}
+        owner: root
+        group: root
+        mode: '0700'
+      register: regfile
+      no_log: true
+
+    - name: Execute registration script
+      ansible.builtin.shell: |
+        set -o pipefail
+        /bin/bash "{{ regfile.dest }}"
+      args:
+        executable: /bin/bash
+      register: reg_result
+      no_log: true
+      changed_when: reg_result.rc == 0
+      failed_when: reg_result.rc != 0
+
+    - name: Clean up registration script
+      ansible.builtin.file:
+        path: "{{ regfile.dest }}"
+        state: absent
+      when: regfile is defined
+      no_log: true
+
+    - name: Report registration result (safe info)
+      ansible.builtin.debug:
+        msg:
+          - "Host registration completed. return_code={{ reg_result.rc }}"
+          - "stdout_lines (first 5 lines): {{ (reg_result.stdout_lines[:5] if reg_result.stdout_lines is defined else []) }}"
+      no_log: false
