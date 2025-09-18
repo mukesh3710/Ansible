@@ -19,7 +19,7 @@ Flow:
    - `bearer_token` (secret)
    - `activation_key` (secret)
    Use injectors to map these as extra_vars:
-(Example YAML for the Credential Type is provided in the repo/documentation.)
+(Example YAML for the Credential Type is provided in the documentation/Custom_Credential.md.)
 
 2. **Create Credential Instance** of this type:
 - Paste your Bearer token (JWT) and Activation Key.
