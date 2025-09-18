@@ -1,0 +1,69 @@
+---
+- name: Register host to Satellite with dynamic lifecycle environment (secure)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars_files:
+    - group_vars/all/vault.yml   # encrypted with ansible-vault (contains foreman credentials)
+
+  vars:
+    server_url: "https://satellite.lab.local"   # Foreman / Satellite base URL (no trailing /register)
+    activation_keys:                         # activation key(s) to use - keep as list
+      - "rocky9-activation-key"
+    location: "4"
+    operatingsystem: "2"
+    organization: "3"
+    validate_certs: false    # set to true if you have valid certificates and want verification
+    update_packages: false
+
+  tasks:
+    - name: Read node.class file
+      ansible.builtin.slurp:
+        src: /etc/node.class
+      register: node_class
+      ignore_errors: true
+
+    - name: Determine lifecycle environment (Development/Production/Library)
+      set_fact:
+        lifecycle_env: >-
+          {% if node_class is not failed %}
+            {% set val = (node_class['content'] | b64decode).strip() %}
+            {% if val in ['Development', 'Production'] %}
+              {{ val }}
+            {% else %}
+              Library
+            {% endif %}
+          {% else %}
+            Library
+          {% endif %}
+
+    - name: Generate Satellite/Foreman registration command (via API)
+      theforeman.foreman.registration_command:
+        server_url: "{{ server_url }}"
+        username: "{{ foreman_username }}"
+        password: "{{ foreman_password }}"
+        activation_keys: "{{ activation_keys }}"
+        lifecycle_environment: "{{ lifecycle_env }}"
+        location: "{{ location }}"
+        operatingsystem: "{{ operatingsystem }}"
+        organization: "{{ organization }}"
+        update_packages: "{{ update_packages }}"
+        validate_certs: "{{ validate_certs }}"
+        # set insecure True if you want the initial curl to be --insecure (module param 'insecure')
+      register: registration_cmd
+      delegate_to: localhost
+      run_once: false
+
+    - name: Show generated registration command (debug - truncated for safety)
+      ansible.builtin.debug:
+        msg: "registration command generated (length={{ registration_cmd.registration_command|length }})"
+      when: registration_cmd is defined
+
+    - name: Execute registration command on host
+      ansible.builtin.shell: "{{ registration_cmd.registration_command }}"
+      args:
+        executable: /bin/bash
+      when:
+        - registration_cmd is defined
+        - registration_cmd.registration_command is defined
