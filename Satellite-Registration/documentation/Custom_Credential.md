@@ -23,13 +23,12 @@ env:
   ACTIVATION_KEY: '{{ activation_key }}'
   BEARER_TOKEN: '{{ bearer_token }}'
 ```
-Save it as “Satellite Registration” credential type.
 
-Now when you create a Credential with this type, you’ll have two fields:
+3. Save it as “Satellite Registration” credential type.
 
-Activation Key
-
-Bearer Token (masked/secret).
+4. Now when you create a Credential with this type, you’ll have two fields:
+   - Activation Key
+   - Bearer Token (masked/secret).
 
 Your playbook can then safely reference:
 ```yaml
