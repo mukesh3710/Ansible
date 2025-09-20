@@ -1,0 +1,15 @@
+git clone https://github.com/mukesh3710/Ansible.git
+ls -lrt 
+cd Ansible
+ls -lrt 
+git checkout -b dev
+cp -R /Users/mukesh3710/Downloads/post_build . 
+ls lrt 
+ls -lrt 
+git add .
+git commit -m "Adding post_build role"
+git push --set-upstream origin dev
+git checkout main
+git pull origin main
+git merge dev
+git push origin main
