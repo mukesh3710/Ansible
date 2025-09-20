@@ -1,0 +1,33 @@
+# Ansible configuration file
+
+[defaults]
+# Specifies the path to the inventory file.
+# This example uses a relative path, pointing to a file named 'inventory'
+# in the same directory where the 'ansible' command is executed.
+inventory = ./inventory
+
+# The name of the user to log in as on the managed hosts.
+# If not specified, the current user's name is used.
+remote_user = someuser
+
+# Whether or not to prompt for an SSH password.
+# Can be set to 'false' if using SSH public key authentication.
+# In this example, it's set to 'false' assuming SSH keys are in use.
+ask_pass = false
+
+[privilege_escalation]
+# Whether to automatically switch users on the managed host
+# (typically to root) after connecting.
+# 'true' enables privilege escalation.
+become = true
+
+# The method used to switch users. The default is 'sudo'.
+become_method = sudo
+
+# The user to switch to on the managed hosts. The default is 'root'.
+become_user = root
+
+# Whether to prompt for a password for your become_method.
+# In this example, it's set to 'false' assuming a password-less sudo
+# setup for the 'someuser'.
+become_ask_pass = false
