@@ -1,0 +1,26 @@
+---
+- name: Import update tasks
+  import_tasks: update.yml
+
+- name: Import user tasks
+  import_tasks: users.yml
+
+- name: Import filesystem tasks
+  import_tasks: filesystem.yml
+
+- name: Import kernel hardening tasks
+  import_tasks: kernel.yml
+
+- name: Import MongoDB tasks
+  import_tasks: mongodb.yml
+
+- name: Import Webapp tasks
+  import_tasks: webapp.yml
+
+- name: Disable firewall
+  become: true
+  ansible.builtin.systemd:
+    name: firewalld
+    enabled: no
+    state: stopped
+  ignore_errors: yes

@@ -1,0 +1,6 @@
+---
+- name: Update all packages to latest
+  become: true
+  ansible.builtin.yum:
+    name: '*'
+    state: latest

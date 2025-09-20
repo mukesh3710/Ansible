@@ -1,0 +1,63 @@
+---
+- name: Create logical volume for MongoDB
+  become: true
+  community.general.lvol:
+    vg: rhel
+    lv: mongo
+    size: "{{ mongo_fs_size }}"
+    state: present
+
+- name: Format MongoDB volume
+  become: true
+  ansible.builtin.filesystem:
+    fstype: xfs
+    dev: "/dev/rhel/mongo"
+
+- name: Mount /opt/mongo
+  become: true
+  ansible.builtin.mount:
+    path: /opt/mongo
+    src: "/dev/rhel/mongo"
+    fstype: xfs
+    state: mounted
+
+- name: Create dbid user
+  become: true
+  ansible.builtin.user:
+    name: "{{ db_user }}"
+    shell: /bin/bash
+
+- name: Install MongoDB
+  become: true
+  ansible.builtin.yum:
+    name: mongodb-server
+    state: present
+
+- name: Start MongoDB
+  become: true
+  ansible.builtin.systemd:
+    name: mongod
+    state: started
+    enabled: yes
+
+- name: Insert temple data into MongoDB
+  become: true
+  ansible.builtin.template:
+    src: mongodata.j2
+    dest: /tmp/temple.json
+    mode: '0644'
+
+- name: Import data to MongoDB
+  become: true
+  ansible.builtin.command: >
+    mongoimport --db templedb --collection places --file /tmp/temple.json --jsonArray
+  register: mongo_import
+  failed_when: "'error' in mongo_import.stderr"
+  ignore_errors: yes
+
+- name: Test MongoDB connectivity
+  become: true
+  ansible.builtin.shell: |
+    mongo --eval 'db.stats()'
+  register: mongo_test
+  changed_when: false

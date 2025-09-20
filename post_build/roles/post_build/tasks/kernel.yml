@@ -1,0 +1,10 @@
+---
+- name: Harden kernel parameters
+  become: true
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ kernel_params|dict2items }}"
+  notify: Reload sysctl

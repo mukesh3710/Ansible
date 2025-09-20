@@ -1,0 +1,31 @@
+---
+- name: Create /opt/test filesystem
+  become: true
+  community.general.lvg:
+    vg: rhel
+    pesize: 4M
+    state: present
+
+- name: Create logical volume for test
+  become: true
+  community.general.lvol:
+    vg: rhel
+    lv: test
+    size: "{{ test_fs_size }}"
+    state: present
+
+- name: Format /dev/rhel/test
+  become: true
+  ansible.builtin.filesystem:
+    fstype: xfs
+    dev: "/dev/rhel/test"
+
+- name: Mount /opt/test
+  become: true
+  ansible.builtin.mount:
+    path: /opt/test
+    src: "/dev/rhel/test"
+    fstype: xfs
+    state: mounted
+
+# Repeat for /opt/mongo and /opt/web as needed (see mongodb.yml and webapp.yml)

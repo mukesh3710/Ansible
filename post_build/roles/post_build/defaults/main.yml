@@ -1,0 +1,8 @@
+---
+user_name: test
+user_pubkey_path: files/id_rsa.pub
+db_user: dbid
+web_user: webid
+test_fs_size: 1G
+mongo_fs_size: 2G
+web_fs_size: 1G

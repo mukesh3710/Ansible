@@ -1,0 +1,6 @@
+---
+- name: Linux Post Build Tasks
+  hosts: "rhel8_hosts:&datacenter"
+  become: true
+  roles:
+    - post_build
