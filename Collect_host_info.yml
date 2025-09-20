@@ -1,0 +1,59 @@
+---
+- name: Collect System Information and Save to Controller Node
+  hosts: all
+  gather_facts: false
+
+  vars_prompt:
+    - name: output_dir
+      prompt: "Enter the absolute path to save output files on the controller node"
+      private: no
+
+  tasks:
+
+    - name: Get current date in MMDDYY format
+      ansible.builtin.shell: date +%m%d%y
+      register: date_cmd
+
+    - name: Run df -h
+      ansible.builtin.shell: df -h
+      register: dfh
+
+    - name: Run ip addr
+      ansible.builtin.shell: ip addr
+      register: ipaddr
+
+    - name: Run uptime
+      ansible.builtin.shell: uptime
+      register: uptime
+
+    - name: Run uname -r
+      ansible.builtin.shell: uname -r
+      register: uname_r
+
+    - name: Create formatted output file on remote host
+      ansible.builtin.copy:
+        dest: "/tmp/{{ inventory_hostname }}.{{ date_cmd.stdout }}.out"
+        content: |
+          ===== df -h =====
+          {{ dfh.stdout }}
+
+          ===== ip addr =====
+          {{ ipaddr.stdout }}
+
+          ===== uptime =====
+          {{ uptime.stdout }}
+
+          ===== uname -r =====
+          {{ uname_r.stdout }}
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Fetch output file to controller node
+      ansible.builtin.fetch:
+        src: "/tmp/{{ inventory_hostname }}.{{ date_cmd.stdout }}.out"
+        dest: "{{ output_dir }}/"
+        flat: yes
+
+    - name: Remove temp output file from remote host
+      ansible.builtin.file:
+        path: "/tmp/{{ inventory_hostname }}.{{ date_cmd.stdout }}.out"
+        state: absent
