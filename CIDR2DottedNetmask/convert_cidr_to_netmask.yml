@@ -1,0 +1,23 @@
+---
+- name: Convert CIDR Network Info to Dotted Netmask with ansible.utils.ipaddr
+  hosts: all
+  gather_facts: false
+  vars:
+    # Example input: can be overridden by --extra-vars or host/group vars
+    network_cidr: "192.0.2.1/24"
+  tasks:
+    - name: Extract IP and Netmask from CIDR
+      set_fact:
+        ip_address: "{{ network_cidr | ansible.utils.ipaddr('address') }}"
+        netmask: "{{ network_cidr | ansible.utils.ipaddr('netmask') }}"
+
+    - name: Show extracted IP and netmask
+      debug:
+        msg:
+          - "IP Address: {{ ip_address }}"
+          - "Netmask: {{ netmask }}"
+
+    - name: Render a config file with classic netmask format
+      ansible.builtin.template:
+        src: network_interface.conf.j2
+        dest: /tmp/network_interface.conf
