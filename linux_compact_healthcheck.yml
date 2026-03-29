@@ -1,0 +1,234 @@
+---
+- name: Compact Linux health check for LLM summarization
+  hosts: all
+  become: true
+  gather_facts: false
+  strategy: free
+
+  vars:
+    fs_threshold_pct: 90
+    journal_since: "15 minutes ago"
+    journal_priority: "warning..alert"
+    process_rows: 6
+
+    report_dir: "/tmp/llm_healthcheck"
+    report_text_path: "{{ report_dir }}/healthcheck_report.txt"
+    report_json_path: "{{ report_dir }}/healthcheck_report.json"
+
+    excluded_fstypes:
+      - tmpfs
+      - devtmpfs
+      - overlay
+      - squashfs
+      - proc
+      - sysfs
+      - cgroup
+      - cgroup2
+      - debugfs
+      - securityfs
+      - pstore
+      - configfs
+      - autofs
+      - fusectl
+      - tracefs
+
+  tasks:
+    - name: Gather only required facts
+      ansible.builtin.setup:
+        gather_subset:
+          - min
+          - hardware
+          - network
+        filter:
+          - ansible_hostname
+          - ansible_fqdn
+          - ansible_date_time
+          - ansible_distribution
+          - ansible_distribution_version
+          - ansible_kernel
+          - ansible_architecture
+          - ansible_uptime_seconds
+          - ansible_memory_mb
+          - ansible_mounts
+      changed_when: false
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Run vmstat snapshot
+      ansible.builtin.command:
+        argv:
+          - vmstat
+          - "5"
+          - "2"
+      register: vmstat_cmd
+      changed_when: false
+
+    - name: Collect top memory processes
+      ansible.builtin.shell: |
+        set -o pipefail
+        ps -eo pid,ppid,cmd,%mem,rss,vsz --sort=-rss | head -n {{ process_rows }}
+      args:
+        executable: /bin/bash
+      register: topmem_cmd
+      changed_when: false
+
+    - name: Collect top CPU processes
+      ansible.builtin.shell: |
+        set -o pipefail
+        ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n {{ process_rows }}
+      args:
+        executable: /bin/bash
+      register: topcpu_cmd
+      changed_when: false
+
+    - name: Collect socket summary
+      ansible.builtin.command:
+        argv:
+          - ss
+          - -s
+      register: ss_cmd
+      changed_when: false
+      failed_when: false
+
+    - name: Collect recent journal warnings and errors
+      ansible.builtin.command:
+        argv:
+          - journalctl
+          - --since
+          - "{{ journal_since }}"
+          - --no-pager
+          - -p
+          - "{{ journal_priority }}"
+      register: journal_cmd
+      changed_when: false
+      failed_when: false
+
+    - name: Build filesystem alerts from facts
+      ansible.builtin.set_fact:
+        fs_alerts: []
+      changed_when: false
+
+    - name: Append filesystems above threshold
+      ansible.builtin.set_fact:
+        fs_alerts: "{{ fs_alerts + [item.mount ~ ' is at ' ~ used_pct ~ '%'] }}"
+      vars:
+        used_pct: >-
+          {{
+            (
+              100 - ((item.size_available | float / item.size_total | float) * 100)
+            ) | round(0, 'common') | int
+          }}
+      loop: "{{ ansible_mounts | default([]) }}"
+      loop_control:
+        label: "{{ item.mount }}"
+      when:
+        - item.mount is defined
+        - item.fstype is defined
+        - item.fstype not in excluded_fstypes
+        - item.size_total is defined
+        - item.size_total | float > 0
+        - item.size_available is defined
+        - (
+            100 - ((item.size_available | float / item.size_total | float) * 100)
+          ) | round(0, 'common') | int > fs_threshold_pct | int
+      changed_when: false
+
+    - name: Trim journal output to last 50 lines
+      ansible.builtin.set_fact:
+        journal_lines_trimmed: >-
+          {{
+            (journal_cmd.stdout_lines | default([]))[-50:]
+            if (journal_cmd.stdout_lines | default([]) | length > 0)
+            else ['No warning/error journal entries in last 15 minutes']
+          }}
+      changed_when: false
+
+    - name: Build healthcheck data structure
+      ansible.builtin.set_fact:
+        healthcheck_report:
+          meta:
+            host: "{{ ansible_hostname | default(inventory_hostname) }}"
+            fqdn: "{{ ansible_fqdn | default('N/A') }}"
+            collected_at: "{{ ansible_date_time.iso8601 | default('N/A') }}"
+            os: "{{ (ansible_distribution | default('N/A')) ~ ' ' ~ (ansible_distribution_version | default('N/A')) }}"
+            kernel: "{{ ansible_kernel | default('N/A') }}"
+            architecture: "{{ ansible_architecture | default('N/A') }}"
+            uptime_seconds: "{{ ansible_uptime_seconds | default('N/A') }}"
+          memory:
+            total_mb: "{{ ansible_memory_mb.real.total | default('N/A') }}"
+            used_mb: "{{ ansible_memory_mb.real.used | default('N/A') }}"
+            free_mb: "{{ ansible_memory_mb.real.free | default('N/A') }}"
+            swap_total_mb: "{{ ansible_memory_mb.swap.total | default('N/A') }}"
+            swap_used_mb: "{{ ansible_memory_mb.swap.used | default('N/A') }}"
+          vmstat: "{{ vmstat_cmd.stdout | default('N/A') }}"
+          top_memory_processes: "{{ topmem_cmd.stdout | default('N/A') }}"
+          top_cpu_processes: "{{ topcpu_cmd.stdout | default('N/A') }}"
+          socket_summary: "{{ ss_cmd.stdout | default('N/A') }}"
+          filesystem_alerts: "{{ fs_alerts if (fs_alerts | length > 0) else ['No filesystem above ' ~ fs_threshold_pct ~ '%'] }}"
+          journal_warning_error: "{{ journal_lines_trimmed }}"
+      changed_when: false
+
+    - name: Render compact text report
+      ansible.builtin.set_fact:
+        healthcheck_report_text: |
+          === META ===
+          host: {{ healthcheck_report.meta.host }}
+          fqdn: {{ healthcheck_report.meta.fqdn }}
+          collected_at: {{ healthcheck_report.meta.collected_at }}
+          os: {{ healthcheck_report.meta.os }}
+          kernel: {{ healthcheck_report.meta.kernel }}
+          architecture: {{ healthcheck_report.meta.architecture }}
+          uptime_seconds: {{ healthcheck_report.meta.uptime_seconds }}
+
+          === MEMORY ===
+          total_mb: {{ healthcheck_report.memory.total_mb }}
+          used_mb: {{ healthcheck_report.memory.used_mb }}
+          free_mb: {{ healthcheck_report.memory.free_mb }}
+          swap_total_mb: {{ healthcheck_report.memory.swap_total_mb }}
+          swap_used_mb: {{ healthcheck_report.memory.swap_used_mb }}
+
+          === VMSTAT ===
+          {{ healthcheck_report.vmstat }}
+
+          === TOP_MEMORY ===
+          {{ healthcheck_report.top_memory_processes }}
+
+          === TOP_CPU ===
+          {{ healthcheck_report.top_cpu_processes }}
+
+          === SOCKET_SUMMARY ===
+          {{ healthcheck_report.socket_summary }}
+
+          === FILESYSTEM_ALERTS ===
+          {{ healthcheck_report.filesystem_alerts | join('\n') }}
+
+          === JOURNAL_WARN_ERR ===
+          {{ healthcheck_report.journal_warning_error | join('\n') }}
+      changed_when: false
+
+    - name: Write text report to managed host
+      ansible.builtin.copy:
+        dest: "{{ report_text_path }}"
+        content: "{{ healthcheck_report_text }}"
+        mode: "0644"
+
+    - name: Write JSON report to managed host
+      ansible.builtin.copy:
+        dest: "{{ report_json_path }}"
+        content: "{{ healthcheck_report | to_nice_json }}"
+        mode: "0644"
+
+    - name: Publish compact report path for workflow use
+      ansible.builtin.set_stats:
+        data:
+          llm_healthcheck_report_text_path: "{{ report_text_path }}"
+          llm_healthcheck_report_json_path: "{{ report_json_path }}"
+        per_host: true
+
+    - name: Print only final compact text report
+      ansible.builtin.debug:
+        msg: "{{ healthcheck_report_text }}"
