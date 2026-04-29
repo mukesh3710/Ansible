@@ -1,0 +1,14 @@
+- name: Validate root access safely
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Check if running as root (UID 0)
+      ansible.builtin.command: id -u
+      register: uid_check
+      changed_when: false
+
+    - name: Fail if not root
+      ansible.builtin.fail:
+        msg: "You do not have root access. UID is {{ uid_check.stdout }}"
+      when: uid_check.stdout != "0"
