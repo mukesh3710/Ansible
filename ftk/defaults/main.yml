@@ -1,0 +1,37 @@
+---
+ftk_supported_versions:
+  - "7"
+  - "8"
+  - "9"
+
+ftk_candidate_vgs:
+  - appvg
+  - rootvg
+
+ftk_lv_name: ftk
+ftk_lv_size_gb: 1
+ftk_filesystem_type: xfs
+ftk_mount_point: /opt/ftk
+ftk_mount_opts: defaults
+
+ftk_var_log_min_free_gb: 1
+
+ftk_gpg_key_filename: AD_Linux_RPM_Public.pgp
+ftk_gpg_key_map:
+  "7": "files/rhel7/AD_Linux_RPM_Public.pgp"
+  "8": "files/rhel8/AD_Linux_RPM_Public.pgp"
+  "9": "files/rhel9/AD_Linux_RPM_Public.pgp"
+
+ftk_agent_pkg_map:
+  "7": "files/rhel7/ftk-agent_linux.rpm"
+  "8": "files/rhel8/ftk-agent_linux.rpm"
+  "9": "files/rhel9/ftk-agent_linux.rpm"
+
+ftk_certificate_src: "files/ftk.crt"
+ftk_agent_service: agentcored
+
+ftk_services_to_disable:
+  - enlinuxpo
+ftk_ignore_missing_services:
+  - enlinuxpo
+

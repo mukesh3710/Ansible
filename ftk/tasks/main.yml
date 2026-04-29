@@ -1,0 +1,152 @@
+---
+- name: Confirm supported platform
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == 'RedHat'
+      - ansible_facts.distribution_major_version in ftk_supported_versions
+    fail_msg: "FTK role supports only Red Hat Enterprise Linux major versions {{ ftk_supported_versions | join(', ') }}."
+
+- name: Capture distribution major version
+  ansible.builtin.set_fact:
+    ftk_rhel_major: "{{ ansible_facts.distribution_major_version }}"
+
+- name: Collect free space for candidate volume groups
+  ansible.builtin.command: "vgs {{ item }} --noheadings --options=vg_free --units g --nosuffix"
+  register: ftk_vgs_free_command
+  changed_when: false
+  failed_when: false
+  loop: "{{ ftk_candidate_vgs }}"
+
+- name: Build volume group free-space mapping
+  ansible.builtin.set_fact:
+    ftk_vg_free_map: "{{ ftk_vg_free_map | default({}) | combine({item.item: (item.stdout | regex_search('([0-9.]+)') | default('0')) | float}) }}"
+  loop: "{{ ftk_vgs_free_command.results | default([]) }}"
+  when: item.rc == 0 and (item.stdout | trim | length) > 0
+
+- name: Ensure default value for missing VGs
+  ansible.builtin.set_fact:
+    ftk_vg_free_map: "{{ ftk_vg_free_map | default({}) | combine({item: 0.0}) }}"
+  loop: "{{ ftk_candidate_vgs }}"
+  when: ftk_vg_free_map[item] is not defined
+
+- name: Validate required free space exists in candidate volume groups
+  ansible.builtin.assert:
+    that:
+      - (ftk_vg_free_map['appvg'] | default(0.0) | float) >= ftk_lv_size_gb
+        or (ftk_vg_free_map['rootvg'] | default(0.0) | float) >= ftk_lv_size_gb
+    fail_msg: "Neither appvg nor rootvg has the required {{ ftk_lv_size_gb }} GB of free space."
+
+- name: Select volume group to host FTK filesystem
+  ansible.builtin.set_fact:
+    ftk_target_vg: >-
+      {{ 'appvg' if (ftk_vg_free_map['appvg'] | default(0) | float) >= ftk_lv_size_gb else 'rootvg' }}
+
+- name: Ensure FTK logical volume exists
+  ansible.builtin.lvol:
+    vg: "{{ ftk_target_vg }}"
+    lv: "{{ ftk_lv_name }}"
+    size: "{{ ftk_lv_size_gb }}g"
+    shrink: false
+    state: present
+
+- name: Create filesystem on FTK logical volume
+  ansible.builtin.filesystem:
+    dev: "/dev/{{ ftk_target_vg }}/{{ ftk_lv_name }}"
+    fstype: "{{ ftk_filesystem_type }}"
+  register: ftk_filesystem
+
+- name: Ensure FTK mount point exists
+  ansible.builtin.file:
+    path: "{{ ftk_mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mount FTK filesystem
+  ansible.posix.mount:
+    path: "{{ ftk_mount_point }}"
+    src: "/dev/{{ ftk_target_vg }}/{{ ftk_lv_name }}"
+    fstype: "{{ ftk_filesystem_type }}"
+    state: mounted
+    opts: "{{ ftk_mount_opts }}"
+
+- name: Verify free space in /var/log
+  ansible.builtin.command: df --output=avail -BG /var/log
+  register: ftk_var_log_df
+  changed_when: false
+
+- name: Parse free space in /var/log
+  ansible.builtin.set_fact:
+    ftk_var_log_free_gb: "{{ (ftk_var_log_df.stdout_lines | last | regex_search('([0-9]+)', '\\1') | int) if (ftk_var_log_df.stdout_lines | length) > 0 else 0 }}"
+
+- name: Ensure /var/log has required free space
+  ansible.builtin.assert:
+    that:
+      - ftk_var_log_free_gb >= ftk_var_log_min_free_gb
+    fail_msg: "/var/log must have at least {{ ftk_var_log_min_free_gb }} GB free."
+
+- name: Copy FTK public key to managed host
+  ansible.builtin.copy:
+    src: "{{ ftk_gpg_key_map[ftk_rhel_major] }}"
+    dest: "/var/tmp/{{ ftk_gpg_key_filename }}"
+    mode: "0644"
+
+- name: Import FTK public key
+  ansible.builtin.rpm_key:
+    key: "/var/tmp/{{ ftk_gpg_key_filename }}"
+    state: present
+
+- name: Copy FTK agent RPM to managed host
+  ansible.builtin.copy:
+    src: "{{ ftk_agent_pkg_map[ftk_rhel_major] }}"
+    dest: "/var/tmp/{{ ftk_agent_pkg_map[ftk_rhel_major] | basename }}"
+    mode: "0644"
+
+- name: Block to configure FTK agent
+  block:
+    - name: Deploy FTK certificate
+      ansible.builtin.copy:
+        src: "{{ ftk_certificate_src }}"
+        dest: "{{ ftk_mount_point }}/ftk.crt"
+        mode: "0644"
+
+    - name: Deploy FTK agent configuration
+      ansible.builtin.template:
+        src: agent.config.j2
+        dest: "{{ ftk_mount_point }}/agent.config"
+        mode: "0644"
+
+    - name: Install FTK agent package
+      ansible.builtin.yum:
+        name: "/var/tmp/{{ ftk_agent_pkg_map[ftk_rhel_major] | basename }}"
+        state: present
+
+    - name: Fix agentcored service file permissions
+      ansible.builtin.file:
+        path: "/etc/systemd/system/{{ ftk_agent_service }}.service"
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Reload systemd
+  rescue:
+    - name: Fail FTK agent configuration block
+      ansible.builtin.fail:
+        msg: "FTK agent configuration failed. Review previous task output."
+
+- name: Disable conflicting services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+  loop: "{{ ftk_services_to_disable }}"
+  register: ftk_disable_services
+  failed_when: ftk_disable_services is failed and item not in ftk_ignore_missing_services
+  ignore_errors: true
+
+- name: Start FTK agent service
+  ansible.builtin.systemd:
+    name: "{{ ftk_agent_service }}"
+    state: started
+    enabled: true
+
