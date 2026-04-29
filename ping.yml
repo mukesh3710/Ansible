@@ -1,0 +1,13 @@
+---
+- name: Test SSH connection to hosts
+  hosts: all
+  gather_facts: false # No need to gather facts for a simple connection test
+  tasks:
+    - name: Ping the host to test connectivity
+      ansible.builtin.ping
+      register: ping_result
+
+    - name: Display success message if ping is successful
+      ansible.builtin.debug:
+        msg: "SSH connection to {{ inventory_hostname }} is OK!"
+      when: ping_result.changed == false # The ping module registers 'changed' as false on success
